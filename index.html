@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinPulse — Mercati & Analisi</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0c0f; --surface:#111418; --surface2:#161b22; --border:#1e2530;
+    --accent:#c8a96e; --accent2:#e8c87a; --green:#2dca72; --red:#ff4757; --blue:#4a9eff;
+    --text:#e8ecf1; --text-muted:#7a8694; --text-dim:#4a5568;
+    --font-serif:'Playfair Display',Georgia,serif; --font-sans:'IBM Plex Sans',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font-sans); font-size:14px; line-height:1.6; min-height:100vh; }
+
+  .fs-btn { position:fixed; bottom:24px; right:24px; z-index:999; background:var(--accent); color:#0a0c0f; border:none; font-family:var(--font-mono); font-size:12px; font-weight:500; letter-spacing:1px; padding:12px 18px; border-radius:4px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); transition:all 0.2s; }
+  .fs-btn:hover { background:var(--accent2); transform:translateY(-2px); }
+
+  /* TICKER TRADINGVIEW */
+  .ticker-wrap { height:46px; overflow:hidden; background:#0a0c0f; border-bottom:1px solid var(--border); }
+  .ticker-wrap .tradingview-widget-container { height:46px !important; }
+
+  header { border-bottom:1px solid var(--border); padding:0 clamp(16px,4vw,48px); }
+  .masthead-top { display:flex; justify-content:space-between; align-items:center; padding:18px 0 12px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:12px; }
+  .logo { font-family:var(--font-serif); font-size:clamp(28px,4vw,40px); font-weight:900; color:var(--accent); letter-spacing:-1px; }
+  .logo span { color:var(--text); }
+  .masthead-meta { text-align:right; color:var(--text-muted); font-size:11px; letter-spacing:0.5px; }
+  .masthead-meta .date { font-family:var(--font-serif); font-style:italic; font-size:13px; color:var(--accent); margin-bottom:2px; }
+  .live-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(45,202,114,0.1); border:1px solid var(--green); color:var(--green); font-size:10px; font-family:var(--font-mono); letter-spacing:1.5px; padding:2px 8px; border-radius:2px; margin-top:4px; }
+  .live-dot { width:6px; height:6px; background:var(--green); border-radius:50%; animation:pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  nav { display:flex; gap:0; padding:0; flex-wrap:wrap; }
+  nav a { color:var(--text-muted); text-decoration:none; font-size:11px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase; padding:14px 20px; border-right:1px solid var(--border); transition:all 0.2s; cursor:pointer; }
+  nav a:first-child { border-left:1px solid var(--border); }
+  nav a:hover, nav a.active { color:var(--accent); background:rgba(200,169,110,0.05); }
+
+  main { width:100%; max-width:1800px; margin:0 auto; padding:0 clamp(16px,4vw,48px); }
+  .page { display:none; padding:32px 0; }
+  .page.active { display:block; }
+
+  .section-header { display:flex; align-items:baseline; gap:16px; margin-bottom:24px; padding-bottom:10px; border-bottom:2px solid var(--accent); flex-wrap:wrap; }
+  .section-title { font-family:var(--font-serif); font-size:clamp(20px,2.5vw,26px); font-weight:700; color:var(--text); }
+  .section-sub { font-size:11px; color:var(--text-muted); letter-spacing:1px; text-transform:uppercase; font-family:var(--font-mono); }
+
+  /* INDICI HERO — ora widget TV */
+  .indices-hero { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:20px; margin-bottom:40px; }
+  .index-card-tv { background:var(--surface); border:1px solid var(--border); position:relative; overflow:hidden; transition:all 0.25s; height:220px; }
+  .index-card-tv::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--accent); }
+  .index-card-tv:hover { border-color:var(--accent); transform:translateY(-3px); box-shadow:0 12px 30px rgba(0,0,0,0.4); }
+  .index-card-label { position:absolute; top:10px; left:14px; z-index:2; font-family:var(--font-mono); font-size:10px; color:var(--accent); letter-spacing:1.5px; text-transform:uppercase; background:rgba(10,12,15,0.8); padding:2px 8px; border-radius:3px; pointer-events:none; }
+
+  /* MARKET OVERVIEW TABLE */
+  .tv-market-overview { width:100%; height:600px; background:var(--surface); border:1px solid var(--border); border-radius:4px; overflow:hidden; margin-bottom:40px; }
+
+  /* IERI/OGGI — Symbol Overview grid */
+  .tracking-grid-tv { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:20px; margin-bottom:40px; }
+  .track-card-tv { background:var(--surface); border:1px solid var(--border); overflow:hidden; }
+  .track-card-label { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .track-card-name { font-family:var(--font-serif); font-size:15px; font-weight:700; }
+  .track-card-flag { font-size:18px; }
+  .track-card-widget { height:200px; }
+
+  /* SETTORI */
+  .sector-tabs { display:flex; gap:0; margin-bottom:28px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .sector-tab { padding:12px 22px; font-size:12px; font-weight:500; letter-spacing:0.5px; color:var(--text-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all 0.2s; white-space:nowrap; display:flex; align-items:center; gap:8px; }
+  .sector-tab:hover { color:var(--text); }
+  .sector-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .sector-icon { font-size:16px; }
+  .sector-content { display:none; }
+  .sector-content.active { display:block; }
+  .sector-overview { display:grid; grid-template-columns:1fr 320px; gap:24px; margin-bottom:28px; }
+  .sector-desc { background:var(--surface); border:1px solid var(--border); padding:24px; }
+  .sector-desc h2 { font-family:var(--font-serif); font-size:26px; margin-bottom:12px; color:var(--accent); }
+  .sector-desc p { color:var(--text-muted); line-height:1.7; margin-bottom:16px; }
+  .sector-stats-box { background:var(--surface); border:1px solid var(--border); padding:20px; }
+  .stat-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .stat-row:last-child { border-bottom:none; }
+  .stat-label { color:var(--text-muted); }
+  .stat-val { font-family:var(--font-mono); font-weight:500; }
+  .companies-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+  .company-card { background:var(--surface); border:1px solid var(--border); padding:18px 20px; transition:all 0.2s; cursor:pointer; position:relative; }
+  .company-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+  .company-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+  .company-ticker { font-family:var(--font-mono); font-size:16px; font-weight:500; color:var(--accent); }
+  .company-rank { font-family:var(--font-mono); font-size:10px; color:var(--text-dim); border:1px solid var(--border); padding:2px 6px; }
+  .company-name { font-weight:600; font-size:15px; margin-bottom:4px; }
+  .company-sub { font-size:11px; color:var(--text-muted); margin-bottom:14px; }
+  .company-price { font-family:var(--font-mono); font-size:20px; font-weight:500; margin-bottom:4px; }
+  .company-metrics { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); }
+  .metric { font-size:11px; }
+  .metric-label { color:var(--text-muted); margin-bottom:2px; }
+  .metric-val { font-family:var(--font-mono); font-weight:500; }
+  .ai-signal { display:inline-flex; align-items:center; gap:5px; font-size:10px; font-family:var(--font-mono); letter-spacing:1px; padding:3px 8px; border-radius:2px; margin-top:10px; }
+  .ai-signal.buy { background:rgba(45,202,114,0.1); color:var(--green); border:1px solid rgba(45,202,114,0.3); }
+  .ai-signal.sell { background:rgba(255,71,87,0.1); color:var(--red); border:1px solid rgba(255,71,87,0.3); }
+  .ai-signal.hold { background:rgba(200,169,110,0.1); color:var(--accent); border:1px solid rgba(200,169,110,0.3); }
+  .up-text { color:var(--green); }
+  .dn-text { color:var(--red); }
+
+  /* ANALISI TITOLO */
+  .analisi-search { display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+  .analisi-search input { flex:1; min-width:240px; background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:var(--font-sans); font-size:15px; padding:14px 18px; border-radius:6px; outline:none; transition:border-color 0.2s; }
+  .analisi-search input:focus { border-color:var(--accent); }
+  .analisi-search button { background:var(--accent); color:#0a0c0f; border:none; font-family:var(--font-mono); font-size:13px; font-weight:600; letter-spacing:1px; padding:0 24px; border-radius:6px; cursor:pointer; transition:all 0.2s; }
+  .analisi-search button:hover { background:var(--accent2); }
+  .analisi-quick { display:flex; gap:8px; align-items:center; margin-bottom:24px; flex-wrap:wrap; }
+  .quick-pill { background:var(--surface); border:1px solid var(--border); color:var(--text-muted); font-size:12px; padding:6px 14px; border-radius:20px; cursor:pointer; transition:all 0.2s; }
+  .quick-pill:hover { color:var(--accent); border-color:var(--accent); }
+  .tv-chart-wrap { width:100%; height:600px; background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:20px; }
+  .analisi-bottom { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .tv-side { height:450px; background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  @media (max-width:1100px){ .analisi-bottom { grid-template-columns:1fr; } .sector-overview{grid-template-columns:1fr;} }
+
+  /* NOTIZIE */
+  .news-layout { display:grid; grid-template-columns:1fr 360px; gap:32px; }
+  .news-source-tabs { display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap; }
+  .news-source-tab { padding:8px 16px; font-size:11px; font-family:var(--font-mono); letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); background:var(--surface); border:1px solid var(--border); border-radius:4px; cursor:pointer; transition:all 0.2s; }
+  .news-source-tab:hover { color:var(--text); border-color:var(--accent); }
+  .news-source-tab.active { color:#0a0c0f; background:var(--accent); border-color:var(--accent); font-weight:600; }
+  .news-link { text-decoration:none; color:inherit; display:block; }
+  .news-link:hover .news-item-title, .news-link:hover .news-headline { color:var(--accent); }
+  .read-original { font-family:var(--font-mono); font-size:10px; color:var(--accent); letter-spacing:1px; margin-top:8px; display:inline-block; }
+  .tier-badge { font-family:var(--font-mono); font-size:9px; letter-spacing:1px; padding:1px 6px; border:1px solid; border-radius:3px; margin-right:6px; }
+  .news-featured { border-bottom:1px solid var(--border); padding-bottom:28px; margin-bottom:28px; }
+  .news-cat { font-family:var(--font-mono); font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); margin-bottom:10px; }
+  .news-headline { font-family:var(--font-serif); font-size:28px; font-weight:700; line-height:1.3; margin-bottom:12px; cursor:pointer; transition:color 0.2s; }
+  .news-headline:hover { color:var(--accent); }
+  .news-summary { color:var(--text-muted); line-height:1.7; margin-bottom:14px; }
+  .news-list { display:flex; flex-direction:column; gap:0; }
+  .news-item { padding:18px 0; border-bottom:1px solid var(--border); display:grid; grid-template-columns:1fr 80px; gap:16px; align-items:start; cursor:pointer; }
+  .news-item:hover .news-item-title { color:var(--accent); }
+  .news-item-cat { font-size:10px; font-family:var(--font-mono); letter-spacing:1.5px; color:var(--accent); margin-bottom:4px; }
+  .news-item-title { font-family:var(--font-serif); font-size:16px; font-weight:600; margin-bottom:6px; transition:color 0.2s; }
+  .news-item-meta { font-size:11px; color:var(--text-dim); font-family:var(--font-mono); }
+  .news-item-time { font-size:11px; font-family:var(--font-mono); color:var(--text-dim); text-align:right; padding-top:2px; }
+  .sidebar-widget { background:var(--surface); border:1px solid var(--border); padding:20px; margin-bottom:20px; }
+  .widget-title { font-family:var(--font-serif); font-size:15px; font-weight:700; margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--border); color:var(--accent); }
+  .movers-list { display:flex; flex-direction:column; gap:0; }
+  .mover-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .mover-item:last-child { border-bottom:none; }
+  .mover-name { font-weight:500; }
+  .mover-sub { font-size:11px; color:var(--text-muted); }
+  .mover-right { text-align:right; font-family:var(--font-mono); }
+
+  /* MODELLO AI */
+  .model-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:32px; }
+  .model-card { background:var(--surface); border:1px solid var(--border); padding:24px; }
+  .model-card h3 { font-family:var(--font-serif); font-size:18px; margin-bottom:16px; color:var(--accent); }
+  .signal-table { width:100%; border-collapse:collapse; }
+  .signal-table th { font-size:10px; font-family:var(--font-mono); letter-spacing:1.5px; color:var(--text-muted); text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); text-transform:uppercase; }
+  .signal-table td { padding:10px; border-bottom:1px solid var(--border); font-size:13px; }
+  .signal-table tr:last-child td { border-bottom:none; }
+  .conf-bar { display:flex; align-items:center; gap:8px; }
+  .conf-track { flex:1; height:5px; background:var(--border); border-radius:3px; overflow:hidden; min-width:60px; }
+  .conf-fill { height:100%; border-radius:3px; }
+  .conf-fill.high { background:var(--green); }
+  .conf-fill.mid { background:var(--accent); }
+  .conf-fill.low { background:var(--red); }
+  .conf-pct { font-family:var(--font-mono); font-size:11px; color:var(--text-muted); width:32px; text-align:right; }
+
+  /* NEWS SIDEBAR FOREX widget TV */
+  .tv-forex-widget { height:300px; background:var(--surface); border:1px solid var(--border); overflow:hidden; }
+
+  footer { border-top:1px solid var(--border); margin-top:60px; padding:24px clamp(16px,4vw,48px); display:flex; justify-content:space-between; align-items:center; color:var(--text-dim); font-size:11px; font-family:var(--font-mono); flex-wrap:wrap; gap:12px; }
+  .footer-logo { font-family:var(--font-serif); font-size:20px; color:var(--accent); }
+  .disclaimer { max-width:600px; line-height:1.5; }
+
+  @media (max-width:1100px){ .news-layout{grid-template-columns:1fr;} .model-grid{grid-template-columns:1fr;} }
+  @media (max-width:700px){ nav a{padding:12px 14px;font-size:10px;} .fs-btn{bottom:16px;right:16px;padding:10px 14px;} }
+  body:fullscreen { overflow-y:auto; }
+  body:fullscreen main { max-width:100%; }
+</style>
+</head>
+<body>
+
+<button class="fs-btn" onclick="toggleFullscreen()" id="fsBtn">⛶ SCHERMO INTERO</button>
+
+<!-- TICKER TAPE LIVE TRADINGVIEW -->
+<div class="ticker-wrap">
+  <div class="tradingview-widget-container">
+    <div class="tradingview-widget-container__widget"></div>
+    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+    {
+      "symbols": [
+        {"proName":"FOREXCOM:SPXUSD","title":"S&P 500"},
+        {"proName":"NASDAQ:NDX","title":"NASDAQ 100"},
+        {"proName":"FOREXCOM:DJI","title":"Dow Jones"},
+        {"proName":"INDEX:DEU40","title":"DAX 40"},
+        {"proName":"INDEX:FRA40","title":"CAC 40"},
+        {"proName":"INDEX:UK100","title":"FTSE 100"},
+        {"proName":"INDEX:ITA40","title":"FTSE MIB"},
+        {"proName":"INDEX:JPN225","title":"Nikkei 225"},
+        {"proName":"INDEX:CHN50","title":"Shanghai"},
+        {"proName":"INDEX:HSI","title":"Hang Seng"},
+        {"proName":"FX:EURUSD","title":"EUR/USD"},
+        {"proName":"TVC:GOLD","title":"Gold"},
+        {"proName":"TVC:USOIL","title":"WTI Oil"},
+        {"proName":"BITSTAMP:BTCUSD","title":"Bitcoin"}
+      ],
+      "showSymbolLogo": false,
+      "isTransparent": true,
+      "displayMode": "adaptive",
+      "colorTheme": "dark",
+      "locale": "it"
+    }
+    </script>
+  </div>
+</div>
+
+<header>
+  <div class="masthead-top">
+    <div class="logo">Fin<span>Pulse</span></div>
+    <div class="masthead-meta">
+      <div class="date" id="todayDate"></div>
+      <div>Mercati Mondiali • Analisi • Segnali AI</div>
+      <div class="live-badge"><span class="live-dot"></span> LIVE — 15 min delay</div>
+    </div>
+  </div>
+  <nav>
+    <a class="active" onclick="showPage('indices', this)">📊 Indici Mondiali</a>
+    <a onclick="showPage('tracking', this)">📅 Ieri / Oggi</a>
+    <a onclick="showPage('sectors', this)">🏭 Settori</a>
+    <a onclick="showPage('analisi', this)">🔍 Analisi Titolo</a>
+    <a onclick="showPage('news', this)">📰 Notizie</a>
+    <a onclick="showPage('model', this)">🤖 Modello AI</a>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ===== INDICI MONDIALI ===== -->
+  <div class="page active" id="page-indices">
+    <div class="section-header">
+      <span class="section-title">Indici Principali</span>
+      <span class="section-sub">Live • 15 min delay • Powered by TradingView</span>
+    </div>
+
+    <!-- 4 card hero con mini grafico TV -->
+    <div class="indices-hero">
+      <div class="index-card-tv">
+        <div class="index-card-label">🇺🇸 S&P 500</div>
+        <div class="tradingview-widget-container" style="height:100%;">
+          <div class="tradingview-widget-container__widget" style="height:100%;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+          {"symbol":"FOREXCOM:SPXUSD","width":"100%","height":"100%","locale":"it","dateRange":"1D","colorTheme":"dark","isTransparent":true,"autosize":true,"largeChartUrl":""}
+          </script>
+        </div>
+      </div>
+      <div class="index-card-tv">
+        <div class="index-card-label">🇺🇸 NASDAQ 100</div>
+        <div class="tradingview-widget-container" style="height:100%;">
+          <div class="tradingview-widget-container__widget" style="height:100%;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+          {"symbol":"NASDAQ:NDX","width":"100%","height":"100%","locale":"it","dateRange":"1D","colorTheme":"dark","isTransparent":true,"autosize":true}
+          </script>
+        </div>
+      </div>
+      <div class="index-card-tv">
+        <div class="index-card-label">🇩🇪 DAX 40</div>
+        <div class="tradingview-widget-container" style="height:100%;">
+          <div class="tradingview-widget-container__widget" style="height:100%;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+          {"symbol":"INDEX:DEU40","width":"100%","height":"100%","locale":"it","dateRange":"1D","colorTheme":"dark","isTransparent":true,"autosize":true}
+          </script>
+        </div>
+      </div>
+      <div class="index-card-tv">
+        <div class="index-card-label">🇮🇹 FTSE MIB</div>
+        <div class="tradingview-widget-container" style="height:100%;">
+          <div class="tradingview-widget-container__widget" style="height:100%;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+          {"symbol":"INDEX:ITA40","width":"100%","height":"100%","locale":"it","dateRange":"1D","colorTheme":"dark","isTransparent":true,"autosize":true}
+          </script>
+        </div>
+      </div>
+    </div>
+
+    <!-- Market Overview completo — tutti gli indici in tabella live -->
+    <div class="section-header">
+      <span class="section-title">Tutti gli Indici Mondiali</span>
+      <span class="section-sub">Prezzi live • 15 mercati</span>
+    </div>
+    <div class="tv-market-overview">
+      <div class="tradingview-widget-container" style="height:100%;">
+        <div class="tradingview-widget-container__widget" style="height:100%;"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
+        {
+          "colorTheme": "dark",
+          "dateRange": "12M",
+          "showChart": true,
+          "locale": "it",
+          "width": "100%",
+          "height": "100%",
+          "largeChartUrl": "",
+          "isTransparent": true,
+          "showSymbolLogo": true,
+          "showFloatingTooltip": true,
+          "plotLineColorGrowing": "rgba(41,191,111,1)",
+          "plotLineColorFalling": "rgba(255,71,87,1)",
+          "gridLineColor": "rgba(30,37,48,1)",
+          "scaleFontColor": "rgba(122,134,148,1)",
+          "belowLineFillColorGrowing": "rgba(41,191,111,0.12)",
+          "belowLineFillColorFalling": "rgba(255,71,87,0.12)",
+          "belowLineFillColorGrowingBottom": "rgba(41,191,111,0)",
+          "belowLineFillColorFallingBottom": "rgba(255,71,87,0)",
+          "symbolActiveColor": "rgba(200,169,110,0.12)",
+          "tabs": [
+            {
+              "title": "Indici",
+              "symbols": [
+                {"s":"FOREXCOM:SPXUSD","d":"S&P 500"},
+                {"s":"NASDAQ:NDX","d":"NASDAQ 100"},
+                {"s":"FOREXCOM:DJI","d":"Dow Jones"},
+                {"s":"INDEX:DEU40","d":"DAX 40"},
+                {"s":"INDEX:FRA40","d":"CAC 40"},
+                {"s":"INDEX:UK100","d":"FTSE 100"},
+                {"s":"INDEX:ITA40","d":"FTSE MIB"},
+                {"s":"INDEX:JPN225","d":"Nikkei 225"},
+                {"s":"INDEX:HSI","d":"Hang Seng"},
+                {"s":"INDEX:CHN50","d":"Shanghai"},
+                {"s":"INDEX:AUS200","d":"ASX 200"},
+                {"s":"INDEX:NIF50","d":"NIFTY 50"}
+              ],
+              "originalTitle": "Indices"
+            },
+            {
+              "title": "Forex",
+              "symbols": [
+                {"s":"FX:EURUSD","d":"EUR/USD"},
+                {"s":"FX:GBPUSD","d":"GBP/USD"},
+                {"s":"FX:USDJPY","d":"USD/JPY"},
+                {"s":"FX:USDCHF","d":"USD/CHF"},
+                {"s":"FX:AUDUSD","d":"AUD/USD"},
+                {"s":"FX:USDCAD","d":"USD/CAD"}
+              ],
+              "originalTitle": "Forex"
+            },
+            {
+              "title": "Commodities",
+              "symbols": [
+                {"s":"TVC:GOLD","d":"Oro"},
+                {"s":"TVC:SILVER","d":"Argento"},
+                {"s":"TVC:USOIL","d":"WTI Petrolio"},
+                {"s":"TVC:UKOIL","d":"Brent"},
+                {"s":"TVC:NATGAS","d":"Gas Naturale"}
+              ],
+              "originalTitle": "Commodities"
+            },
+            {
+              "title": "Crypto",
+              "symbols": [
+                {"s":"BITSTAMP:BTCUSD","d":"Bitcoin"},
+                {"s":"BITSTAMP:ETHUSD","d":"Ethereum"},
+                {"s":"COINBASE:SOLUSD","d":"Solana"},
+                {"s":"BINANCE:BNBUSDT","d":"BNB"}
+              ],
+              "originalTitle": "Crypto"
+            }
+          ]
+        }
+        </script>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== IERI / OGGI ===== -->
+  <div class="page" id="page-tracking">
+    <div class="section-header">
+      <span class="section-title">Confronto Giornaliero</span>
+      <span class="section-sub">Grafico intraday live per ogni indice • TradingView</span>
+    </div>
+    <p style="color:var(--text-muted);margin-bottom:28px;max-width:700px;line-height:1.7;">
+      Ogni card mostra l'andamento intraday live dell'indice con prezzo attuale e variazione dal giorno precedente. I dati si aggiornano in tempo reale (15 min delay).
+    </p>
+    <div class="tracking-grid-tv" id="tracking-grid-tv"></div>
+  </div>
+
+  <!-- ===== SETTORI ===== -->
+  <div class="page" id="page-sectors">
+    <div class="section-header"><span class="section-title">Analisi per Settore</span><span class="section-sub">Leader di mercato • Performance & Fondamentali</span></div>
+    <div class="sector-tabs" id="sector-tabs"></div>
+    <div id="sector-panels"></div>
+  </div>
+
+  <!-- ===== ANALISI TITOLO ===== -->
+  <div class="page" id="page-analisi">
+    <div class="section-header"><span class="section-title">Analisi Titolo</span><span class="section-sub">Grafico a candele live • Indicatori tecnici • TradingView</span></div>
+    <div class="analisi-search">
+      <input type="text" id="symbol-input" placeholder="Cerca: AAPL, NVDA, TSLA, ENI.MI, BTC..." onkeydown="if(event.key==='Enter') caricaTitolo()">
+      <button onclick="caricaTitolo()">🔍 Analizza</button>
+    </div>
+    <div class="analisi-quick">
+      <span style="color:var(--text-muted);font-size:11px;font-family:var(--font-mono);">RAPIDI:</span>
+      <span class="quick-pill" onclick="setSymbol('NASDAQ:AAPL')">Apple</span>
+      <span class="quick-pill" onclick="setSymbol('NASDAQ:NVDA')">NVIDIA</span>
+      <span class="quick-pill" onclick="setSymbol('NASDAQ:TSLA')">Tesla</span>
+      <span class="quick-pill" onclick="setSymbol('NASDAQ:MSFT')">Microsoft</span>
+      <span class="quick-pill" onclick="setSymbol('NASDAQ:META')">Meta</span>
+      <span class="quick-pill" onclick="setSymbol('NASDAQ:AMZN')">Amazon</span>
+      <span class="quick-pill" onclick="setSymbol('MIL:ENI')">ENI</span>
+      <span class="quick-pill" onclick="setSymbol('MIL:ISP')">Intesa SP</span>
+      <span class="quick-pill" onclick="setSymbol('MIL:STLAM')">Stellantis</span>
+      <span class="quick-pill" onclick="setSymbol('BITSTAMP:BTCUSD')">Bitcoin</span>
+      <span class="quick-pill" onclick="setSymbol('BITSTAMP:ETHUSD')">Ethereum</span>
+      <span class="quick-pill" onclick="setSymbol('FOREXCOM:SPXUSD')">S&P 500</span>
+      <span class="quick-pill" onclick="setSymbol('TVC:GOLD')">Oro</span>
+    </div>
+    <div class="tv-chart-wrap" id="tv-advanced"></div>
+    <div class="analisi-bottom">
+      <div class="tv-side" id="tv-techanalysis"></div>
+      <div class="tv-side" id="tv-fundamentals"></div>
+    </div>
+  </div>
+
+  <!-- ===== NOTIZIE ===== -->
+  <div class="page" id="page-news">
+    <div class="section-header"><span class="section-title">Notizie & Analisi</span><span class="section-sub" id="news-status">Caricamento notizie live...</span></div>
+    <div class="news-source-tabs" id="news-source-tabs"></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;background:var(--surface);border:1px solid var(--border);padding:12px 16px;border-radius:6px;">
+      <strong style="color:var(--text);">Legenda:</strong>
+      <span style="color:#2dca72;">🟢 Ufficiale</span> = testata registrata •
+      <span style="color:#e8c87a;">🟡 Blog</span> = analista indipendente •
+      <span style="color:#ff9f43;">🟠 Da verificare</span> = community/forum
+    </div>
+    <div class="news-layout">
+      <div class="news-main">
+        <div id="news-featured-box"></div>
+        <div class="news-list" id="news-list"><div style="color:var(--text-muted);padding:40px 0;text-align:center;">⏳ Caricamento notizie...</div></div>
+      </div>
+      <div class="news-sidebar">
+        <div class="sidebar-widget">
+          <div class="widget-title">📈 Mercati Live</div>
+          <div class="tv-forex-widget">
+            <div class="tradingview-widget-container" style="height:100%;">
+              <div class="tradingview-widget-container__widget" style="height:100%;"></div>
+              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js" async>
+              {
+                "width": "100%",
+                "height": "100%",
+                "symbolsGroups": [
+                  {"name":"Indici","symbols":[
+                    {"name":"FOREXCOM:SPXUSD","displayName":"S&P 500"},
+                    {"name":"NASDAQ:NDX","displayName":"NASDAQ"},
+                    {"name":"INDEX:ITA40","displayName":"FTSE MIB"},
+                    {"name":"INDEX:DEU40","displayName":"DAX"}
+                  ]},
+                  {"name":"Forex & Commodities","symbols":[
+                    {"name":"FX:EURUSD","displayName":"EUR/USD"},
+                    {"name":"TVC:GOLD","displayName":"Oro"},
+                    {"name":"TVC:USOIL","displayName":"WTI"},
+                    {"name":"BITSTAMP:BTCUSD","displayName":"Bitcoin"}
+                  ]}
+                ],
+                "colorTheme": "dark",
+                "isTransparent": true,
+                "locale": "it"
+              }
+              </script>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODELLO AI ===== -->
+  <div class="page" id="page-model">
+    <div class="section-header"><span class="section-title">Modello Predittivo AI</span><span class="section-sub">Sperimentale — Non costituisce consulenza finanziaria</span></div>
+    <div class="model-grid">
+      <div class="model-card"><h3>📈 Segnali di Trading</h3><table class="signal-table"><thead><tr><th>Asset</th><th>Segnale</th><th>Confidenza</th><th>Timeframe</th></tr></thead><tbody id="signals-tbody"></tbody></table></div>
+      <div class="model-card"><h3>🏭 Performance per Settore</h3><table class="signal-table"><thead><tr><th>Settore</th><th>Score</th><th>Trend</th></tr></thead><tbody id="sector-scores-tbody"></tbody></table></div>
+    </div>
+    <div style="background:rgba(255,71,87,0.05);border:1px solid rgba(255,71,87,0.2);padding:16px 20px;font-size:12px;color:var(--text-muted);">⚠️ <strong style="color:var(--red);">DISCLAIMER:</strong> Segnali generati da modello sperimentale. Non costituiscono consulenza finanziaria.</div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-logo">FinPulse</div>
+  <div class="disclaimer">Dati live con 15 minuti di ritardo via TradingView. FinPulse è un prototipo di piattaforma di analisi finanziaria. Non costituisce consulenza finanziaria.</div>
+  <div>v8.0 — TradingView Live</div>
+</footer>
+
+<script>
+// ===== DATA =====
+const days=['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+const months=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const now=new Date();
+document.getElementById('todayDate').textContent=`${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+// ===== IERI/OGGI — griglia widget Symbol Overview =====
+const TRACKING_INDICES = [
+  { flag:'🇺🇸', name:'S&P 500',          sym:'FOREXCOM:SPXUSD' },
+  { flag:'🇺🇸', name:'NASDAQ 100',        sym:'NASDAQ:NDX'      },
+  { flag:'🇺🇸', name:'Dow Jones',         sym:'FOREXCOM:DJI'    },
+  { flag:'🇮🇹', name:'FTSE MIB',          sym:'INDEX:ITA40'     },
+  { flag:'🇩🇪', name:'DAX 40',            sym:'INDEX:DEU40'     },
+  { flag:'🇫🇷', name:'CAC 40',            sym:'INDEX:FRA40'     },
+  { flag:'🇬🇧', name:'FTSE 100',          sym:'INDEX:UK100'     },
+  { flag:'🇯🇵', name:'Nikkei 225',        sym:'INDEX:JPN225'    },
+  { flag:'🇨🇳', name:'Shanghai',          sym:'INDEX:CHN50'     },
+  { flag:'🇭🇰', name:'Hang Seng',         sym:'INDEX:HSI'       },
+  { flag:'🇮🇳', name:'NIFTY 50',          sym:'INDEX:NIF50'     },
+  { flag:'🇦🇺', name:'ASX 200',           sym:'INDEX:AUS200'    },
+];
+
+function renderTrackingTV(){
+  const grid = document.getElementById('tracking-grid-tv');
+  grid.innerHTML = TRACKING_INDICES.map(idx => `
+    <div class="track-card-tv">
+      <div class="track-card-label">
+        <span class="track-card-name">${idx.name}</span>
+        <span class="track-card-flag">${idx.flag}</span>
+      </div>
+      <div class="track-card-widget">
+        <div class="tradingview-widget-container" style="height:100%;">
+          <div class="tradingview-widget-container__widget" style="height:100%;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+          ${JSON.stringify({
+            symbol: idx.sym,
+            width: '100%',
+            height: '100%',
+            locale: 'it',
+            dateRange: '1D',
+            colorTheme: 'dark',
+            isTransparent: true,
+            autosize: true,
+            chartOnly: false
+          })}
+          <\/script>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ===== SETTORI =====
+const SECTORS=[
+  { id:'tech', label:'Tecnologia', icon:'💻', desc:'Il settore tecnologico guida la crescita globale, trainato da AI, cloud e semiconduttori.', etf:'XLK', etfChg:'+1.42%', pe:'28.4', yieldVal:'0.8%', mom:'+18.4%', companies:[
+    { ticker:'AAPL', name:'Apple Inc.', sub:'Consumer Electronics', price:'$201.45', chg:'+1.34%', mktcap:'$3.1T', pe:'30.2', rev:'$391B', div:'0.5%', signal:'hold' },
+    { ticker:'NVDA', name:'NVIDIA', sub:'Semiconductors / AI', price:'$1,124.80', chg:'+3.21%', mktcap:'$2.75T', pe:'48.1', rev:'$130B', div:'0.0%', signal:'buy' },
+    { ticker:'MSFT', name:'Microsoft', sub:'Cloud / Software', price:'$432.70', chg:'+0.87%', mktcap:'$3.2T', pe:'34.5', rev:'$245B', div:'0.7%', signal:'buy' },
+    { ticker:'GOOGL', name:'Alphabet', sub:'Search / Cloud / AI', price:'$168.20', chg:'+1.04%', mktcap:'$2.1T', pe:'22.8', rev:'$350B', div:'0.0%', signal:'buy' },
+    { ticker:'META', name:'Meta Platforms', sub:'Social Media / AI', price:'$528.40', chg:'+1.55%', mktcap:'$1.35T', pe:'26.1', rev:'$164B', div:'0.4%', signal:'hold' },
+    { ticker:'TSMC', name:'Taiwan Semiconductor', sub:'Semiconductors', price:'$185.30', chg:'+2.10%', mktcap:'$960B', pe:'24.3', rev:'$93B', div:'1.4%', signal:'buy' },
+  ]},
+  { id:'finance', label:'Finanza', icon:'🏦', desc:'Il settore finanziario beneficia dei tassi elevati. Solidi fondamentali e dividendi attraenti.', etf:'XLF', etfChg:'+0.44%', pe:'14.8', yieldVal:'2.4%', mom:'+8.2%', companies:[
+    { ticker:'JPM', name:'JPMorgan Chase', sub:'Banking', price:'$248.10', chg:'+0.62%', mktcap:'$714B', pe:'13.4', rev:'$162B', div:'2.4%', signal:'buy' },
+    { ticker:'BRK.B', name:'Berkshire Hathaway', sub:'Diversified', price:'$462.80', chg:'+0.28%', mktcap:'$1.02T', pe:'23.1', rev:'$364B', div:'0.0%', signal:'hold' },
+    { ticker:'V', name:'Visa', sub:'Payment Networks', price:'$298.40', chg:'+0.74%', mktcap:'$614B', pe:'29.8', rev:'$35B', div:'0.8%', signal:'buy' },
+    { ticker:'GS', name:'Goldman Sachs', sub:'Investment Banking', price:'$548.20', chg:'+1.02%', mktcap:'$184B', pe:'14.2', rev:'$51B', div:'2.1%', signal:'hold' },
+    { ticker:'MS', name:'Morgan Stanley', sub:'Wealth Management', price:'$112.40', chg:'+0.48%', mktcap:'$188B', pe:'17.8', rev:'$55B', div:'3.2%', signal:'hold' },
+    { ticker:'AXP', name:'American Express', sub:'Credit Services', price:'$284.60', chg:'+0.89%', mktcap:'$206B', pe:'19.4', rev:'$65B', div:'1.2%', signal:'buy' },
+  ]},
+  { id:'health', label:'Healthcare', icon:'💊', desc:'Crescita difensiva grazie a innovazione farmaceutica, AI diagnostica e biotecnologie.', etf:'XLV', etfChg:'+0.31%', pe:'19.2', yieldVal:'1.9%', mom:'+5.8%', companies:[
+    { ticker:'LLY', name:'Eli Lilly', sub:'Pharma / GLP-1', price:'$872.40', chg:'+1.84%', mktcap:'$824B', pe:'52.4', rev:'$45B', div:'0.6%', signal:'buy' },
+    { ticker:'JNJ', name:'Johnson & Johnson', sub:'Pharma / MedTech', price:'$162.80', chg:'+0.22%', mktcap:'$389B', pe:'14.8', rev:'$88B', div:'3.4%', signal:'hold' },
+    { ticker:'UNH', name:'UnitedHealth', sub:'Health Insurance', price:'$468.20', chg:'-0.44%', mktcap:'$432B', pe:'17.2', rev:'$382B', div:'1.6%', signal:'hold' },
+    { ticker:'NVO', name:'Novo Nordisk', sub:'Pharma / GLP-1', price:'$74.20', chg:'+2.14%', mktcap:'$330B', pe:'28.4', rev:'$35B', div:'1.2%', signal:'buy' },
+    { ticker:'ABBV', name:'AbbVie', sub:'Immunology', price:'$184.60', chg:'+0.64%', mktcap:'$326B', pe:'20.8', rev:'$55B', div:'3.2%', signal:'hold' },
+    { ticker:'ISRG', name:'Intuitive Surgical', sub:'Robotic Surgery', price:'$524.30', chg:'+1.12%', mktcap:'$184B', pe:'62.4', rev:'$7.8B', div:'0.0%', signal:'buy' },
+  ]},
+  { id:'energy', label:'Energia', icon:'⚡', desc:'Doppia transizione: ottimizzazione fossili ed espansione rinnovabili. Dividendi elevati.', etf:'XLE', etfChg:'-0.82%', pe:'12.4', yieldVal:'4.1%', mom:'-3.2%', companies:[
+    { ticker:'XOM', name:'ExxonMobil', sub:'Oil & Gas', price:'$112.40', chg:'-0.98%', mktcap:'$484B', pe:'13.2', rev:'$400B', div:'3.8%', signal:'hold' },
+    { ticker:'CVX', name:'Chevron', sub:'Oil & Gas', price:'$148.20', chg:'-0.74%', mktcap:'$272B', pe:'14.8', rev:'$200B', div:'4.4%', signal:'hold' },
+    { ticker:'NEE', name:'NextEra Energy', sub:'Renewables', price:'$72.40', chg:'+0.84%', mktcap:'$148B', pe:'22.4', rev:'$24B', div:'2.8%', signal:'buy' },
+    { ticker:'SLB', name:'SLB', sub:'Oilfield Services', price:'$42.80', chg:'-1.24%', mktcap:'$61B', pe:'14.4', rev:'$38B', div:'2.6%', signal:'sell' },
+    { ticker:'ENPH', name:'Enphase Energy', sub:'Solar', price:'$84.20', chg:'+2.44%', mktcap:'$11B', pe:'28.4', rev:'$1.4B', div:'0.0%', signal:'buy' },
+    { ticker:'SHEL', name:'Shell PLC', sub:'Oil & Gas', price:'$68.40', chg:'-0.54%', mktcap:'$218B', pe:'10.8', rev:'$320B', div:'4.2%', signal:'hold' },
+  ]},
+  { id:'consumer', label:'Consumer', icon:'🛍️', desc:'Resilienza nei consumi. Brand premium e marketplace digitali guidano la crescita.', etf:'XLY', etfChg:'+0.64%', pe:'24.8', yieldVal:'1.2%', mom:'+7.4%', companies:[
+    { ticker:'AMZN', name:'Amazon', sub:'E-commerce / Cloud', price:'$192.70', chg:'+0.92%', mktcap:'$2.02T', pe:'38.4', rev:'$620B', div:'0.0%', signal:'buy' },
+    { ticker:'TSLA', name:'Tesla', sub:'EV / Energy', price:'$184.20', chg:'-0.87%', mktcap:'$588B', pe:'62.4', rev:'$97B', div:'0.0%', signal:'hold' },
+    { ticker:'MCD', name:"McDonald's", sub:'QSR', price:'$292.40', chg:'+0.44%', mktcap:'$212B', pe:'22.8', rev:'$24B', div:'2.4%', signal:'hold' },
+    { ticker:'NKE', name:'Nike', sub:'Apparel', price:'$78.40', chg:'+1.24%', mktcap:'$122B', pe:'26.4', rev:'$51B', div:'1.8%', signal:'buy' },
+    { ticker:'LVMH', name:'LVMH', sub:'Luxury Goods', price:'€748.40', chg:'+0.78%', mktcap:'€374B', pe:'22.4', rev:'€87B', div:'1.8%', signal:'hold' },
+    { ticker:'SBUX', name:'Starbucks', sub:'Coffeehouse', price:'$88.20', chg:'+1.44%', mktcap:'$100B', pe:'24.8', rev:'$36B', div:'2.4%', signal:'buy' },
+  ]},
+];
+
+function renderSectors(){
+  document.getElementById('sector-tabs').innerHTML=SECTORS.map((s,i)=>`<div class="sector-tab ${i===0?'active':''}" onclick="switchSector('${s.id}')" id="tab-${s.id}"><span class="sector-icon">${s.icon}</span>${s.label}</div>`).join('');
+  document.getElementById('sector-panels').innerHTML=SECTORS.map((s,i)=>`
+    <div class="sector-content ${i===0?'active':''}" id="panel-${s.id}">
+      <div class="sector-overview">
+        <div class="sector-desc">
+          <h2>${s.icon} ${s.label}</h2>
+          <p>${s.desc}</p>
+          <span class="ai-signal buy" style="font-size:11px;">ETF: ${s.etf} <strong>${s.etfChg}</strong></span>
+        </div>
+        <div class="sector-stats-box">
+          <div class="section-header" style="margin-bottom:14px;"><span class="section-title" style="font-size:15px;">Statistiche</span></div>
+          <div class="stat-row"><span class="stat-label">P/E Medio</span><span class="stat-val">${s.pe}x</span></div>
+          <div class="stat-row"><span class="stat-label">Dividend Yield</span><span class="stat-val">${s.yieldVal}</span></div>
+          <div class="stat-row"><span class="stat-label">Momentum 12M</span><span class="stat-val ${s.mom.startsWith('+')?'up-text':'dn-text'}">${s.mom}</span></div>
+        </div>
+      </div>
+      <div class="section-header"><span class="section-title">Leader del Settore</span><span class="section-sub">Per capitalizzazione</span></div>
+      <div class="companies-grid">
+        ${s.companies.map((c,ci)=>`
+          <div class="company-card" onclick="goAnalisi('${c.ticker}')">
+            <div class="company-header">
+              <div class="company-ticker">${c.ticker}</div>
+              <div class="company-rank">#${ci+1}</div>
+            </div>
+            <div class="company-name">${c.name}</div>
+            <div class="company-sub">${c.sub}</div>
+            <div class="company-price">${c.price}</div>
+            <div class="index-change ${c.chg.startsWith('+')?'up-text':'dn-text'}">${c.chg.startsWith('+')?'▲':'▼'} ${c.chg}</div>
+            <div class="ai-signal ${c.signal}">🤖 AI: ${c.signal.toUpperCase()}</div>
+            <div class="company-metrics">
+              <div class="metric"><div class="metric-label">Mkt Cap</div><div class="metric-val">${c.mktcap}</div></div>
+              <div class="metric"><div class="metric-label">P/E</div><div class="metric-val">${c.pe}x</div></div>
+              <div class="metric"><div class="metric-label">Revenue</div><div class="metric-val">${c.rev}</div></div>
+              <div class="metric"><div class="metric-label">Dividendo</div><div class="metric-val">${c.div}</div></div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function switchSector(id){
+  document.querySelectorAll('.sector-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.sector-content').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.getElementById('panel-'+id).classList.add('active');
+}
+
+// Clic su azienda → vai ad Analisi Titolo
+function goAnalisi(ticker){
+  const sym = ticker.includes(':') ? ticker : 'NASDAQ:'+ticker;
+  setSymbol(sym);
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('page-analisi').classList.add('active');
+  document.querySelectorAll('nav a')[3].classList.add('active');
+  if(!tvLoaded){ tvLoaded=true; }
+  loadTradingView();
+}
+
+// ===== NOTIZIE =====
+const NEWS_SOURCES = [
+  { id:'reuters',   label:'Reuters',         tier:'ufficiale', region:'🌍 Globale',    url:'https://feeds.reuters.com/reuters/businessNews' },
+  { id:'cnbc',      label:'CNBC',            tier:'ufficiale', region:'🇺🇸 USA',       url:'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664' },
+  { id:'wsj',       label:'WSJ Markets',     tier:'ufficiale', region:'🇺🇸 USA',       url:'https://feeds.a.dj.com/rss/RSSMarketsMain.xml' },
+  { id:'ft',        label:'Financial Times', tier:'ufficiale', region:'🇬🇧 UK',        url:'https://www.ft.com/rss/home' },
+  { id:'bbcbiz',    label:'BBC Business',    tier:'ufficiale', region:'🇬🇧 UK',        url:'https://feeds.bbci.co.uk/news/business/rss.xml' },
+  { id:'mw',        label:'MarketWatch',     tier:'ufficiale', region:'🇺🇸 USA',       url:'https://feeds.content.dowjones.io/public/rss/mw_topstories' },
+  { id:'sole',      label:'Il Sole 24 Ore',  tier:'ufficiale', region:'🇮🇹 Italia',    url:'https://www.ilsole24ore.com/rss/finanza.xml' },
+  { id:'quifin',    label:'QuiFinanza',      tier:'ufficiale', region:'🇮🇹 Italia',    url:'https://quifinanza.it/feed/' },
+  { id:'nikkei',    label:'Nikkei Asia',     tier:'ufficiale', region:'🇯🇵 Giappone',  url:'https://asia.nikkei.com/rss/feed/nar' },
+  { id:'scmp',      label:'South China MP',  tier:'ufficiale', region:'🇨🇳 Cina/HK',  url:'https://www.scmp.com/rss/92/feed' },
+  { id:'caixin',    label:'Caixin Global',   tier:'ufficiale', region:'🇨🇳 Cina',      url:'https://www.caixinglobal.com/rss/all.xml' },
+  { id:'tass',      label:'TASS Economy',    tier:'ufficiale', region:'🇷🇺 Russia',    url:'https://tass.com/rss/v2.xml' },
+  { id:'norway',    label:'Norway Today',    tier:'ufficiale', region:'🇳🇴 Norvegia',  url:'https://norwaytoday.info/feed/' },
+  { id:'affarimiei',label:'Affari Miei',     tier:'blog',      region:'🇮🇹 Italia',    url:'https://www.affarimiei.biz/feed' },
+  { id:'cafona',    label:'Finanza Cafona',  tier:'blog',      region:'🇮🇹 Italia',    url:'https://finanzacafona.it/feed/' },
+  { id:'lixi',      label:'Lixi Invest',     tier:'blog',      region:'🇮🇹 Italia',    url:'https://www.lixiinvest.com/feed/' },
+  { id:'zerohedge', label:'ZeroHedge',       tier:'community', region:'🇺🇸 USA',       url:'https://feeds.feedburner.com/zerohedge/feed' },
+  { id:'seekingalpha',label:'Seeking Alpha', tier:'blog',      region:'🇺🇸 USA',       url:'https://seekingalpha.com/feed.xml' },
+  { id:'reddit_inv',label:'r/investing',     tier:'community', region:'🌍 Reddit',     url:'https://www.reddit.com/r/investing/.rss' },
+  { id:'reddit_stk',label:'r/stocks',        tier:'community', region:'🌍 Reddit',     url:'https://www.reddit.com/r/stocks/.rss' },
+  { id:'reddit_wsb',label:'r/wallstreetbets',tier:'community', region:'🌍 Reddit',     url:'https://www.reddit.com/r/wallstreetbets/.rss' },
+  { id:'sec_form4', label:'SEC Insider (4)', tier:'ufficiale', region:'📋 Insider',    cat:'insider', url:'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=4&company=&dateb=&owner=include&count=40&output=atom' },
+  { id:'sec_13f',   label:'SEC Fondi (13F)', tier:'ufficiale', region:'📋 Fondi',      cat:'insider', url:'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=13F&company=&dateb=&owner=include&count=40&output=atom' },
+  { id:'doomberg',  label:'Doomberg',        tier:'blog',      region:'✍️ Analisti',   cat:'analisti', url:'https://doomberg.substack.com/feed' },
+  { id:'netint',    label:'Net Interest',    tier:'blog',      region:'✍️ Analisti',   cat:'analisti', url:'https://www.netinterest.co/feed' },
+  { id:'thetranscript',label:'The Transcript',tier:'blog',     region:'✍️ Analisti',   cat:'analisti', url:'https://thetranscript.substack.com/feed' },
+];
+
+const TIER_INFO = {
+  ufficiale: { dot:'🟢', label:'UFFICIALE',     color:'#2dca72' },
+  blog:      { dot:'🟡', label:'BLOG',          color:'#e8c87a' },
+  community: { dot:'🟠', label:'DA VERIFICARE', color:'#ff9f43' },
+};
+let allNews = [];
+
+function stripHtml(h){ const d=document.createElement('div'); d.innerHTML=h||''; return (d.textContent||d.innerText||'').trim(); }
+function timeAgo(d){ if(!d) return ''; const m=Math.floor((new Date()-new Date(d))/60000); if(isNaN(m)) return ''; if(m<60) return m+'min fa'; if(m<1440) return Math.floor(m/60)+'h fa'; return Math.floor(m/1440)+'g fa'; }
+
+async function fetchSource(src){
+  try{
+    const r = await fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(src.url));
+    const data = await r.json();
+    if(data.status!=='ok'||!data.items) return [];
+    return data.items.slice(0,6).map(it=>({ source:src.label, sourceId:src.id, tier:src.tier, region:src.region||'🌍', cat:src.cat||'news', title:it.title, summary:stripHtml(it.description).slice(0,220), link:it.link, time:timeAgo(it.pubDate), pubDate:it.pubDate }));
+  }catch(e){ return []; }
+}
+
+async function loadLiveNews(){
+  const statusEl=document.getElementById('news-status');
+  const results=await Promise.all(NEWS_SOURCES.map(fetchSource));
+  allNews=results.flat().sort((a,b)=>new Date(b.pubDate)-new Date(a.pubDate));
+  if(allNews.length===0){ statusEl.textContent='Notizie non disponibili'; return; }
+  statusEl.textContent='🟢 LIVE • '+allNews.length+' notizie aggregate';
+  renderNewsTabs();
+  renderNewsFiltered('all');
+}
+
+function tierBadge(tier){ const t=TIER_INFO[tier]||TIER_INFO.ufficiale; return `<span class="tier-badge" style="color:${t.color};border-color:${t.color};">${t.dot} ${t.label}</span>`; }
+
+function renderNewsTabs(){
+  const tabs=[
+    {id:'all',label:'Tutte'},
+    {id:'cat:insider',label:'📋 Insider'},
+    {id:'cat:analisti',label:'✍️ Analisti'},
+    {id:'tier:ufficiale',label:'🟢 Ufficiali'},
+    {id:'tier:blog',label:'🟡 Blog'},
+    {id:'tier:community',label:'🟠 Community'},
+    {id:'reg:🇮🇹',label:'🇮🇹 Italia'},
+    {id:'reg:🇺🇸',label:'🇺🇸 USA'},
+    {id:'reg:🇬🇧',label:'🇬🇧 UK'},
+    {id:'reg:🇯🇵',label:'🇯🇵 Giappone'},
+    {id:'reg:🇨🇳',label:'🇨🇳 Cina'},
+    {id:'reg:🇷🇺',label:'🇷🇺 Russia'},
+    {id:'reg:Reddit',label:'🌍 Reddit'},
+  ];
+  document.getElementById('news-source-tabs').innerHTML=tabs.map((s,i)=>`<div class="news-source-tab ${i===0?'active':''}" onclick="filterNews('${s.id}',this)">${s.label}</div>`).join('');
+}
+function filterNews(id,el){ document.querySelectorAll('.news-source-tab').forEach(t=>t.classList.remove('active')); if(el) el.classList.add('active'); renderNewsFiltered(id); }
+function renderNewsFiltered(id){
+  let list;
+  if(id==='all') list=allNews;
+  else if(id.startsWith('cat:')) list=allNews.filter(n=>n.cat===id.split(':')[1]);
+  else if(id.startsWith('tier:')) list=allNews.filter(n=>n.tier===id.split(':')[1]);
+  else if(id.startsWith('reg:')) list=allNews.filter(n=>n.region&&n.region.includes(id.split(':')[1]));
+  else list=allNews.filter(n=>n.sourceId===id);
+  if(!list.length){ document.getElementById('news-featured-box').innerHTML=''; document.getElementById('news-list').innerHTML='<div style="color:var(--text-muted);padding:20px 0;">Nessuna notizia da questa categoria.</div>'; return; }
+  const f=list[0];
+  document.getElementById('news-featured-box').innerHTML=`<a class="news-link" href="${f.link}" target="_blank" rel="noopener"><div class="news-featured"><div class="news-cat">${tierBadge(f.tier)} ${f.region} ${f.source.toUpperCase()} • ${f.time}</div><div class="news-headline">${f.title}</div><div class="news-summary">${f.summary}…</div><span class="read-original">LEGGI SULL'ORIGINALE →</span></div></a>`;
+  document.getElementById('news-list').innerHTML=list.slice(1).map(n=>`<a class="news-link" href="${n.link}" target="_blank" rel="noopener"><div class="news-item"><div><div class="news-item-cat">${tierBadge(n.tier)} ${n.region} ${n.source}</div><div class="news-item-title">${n.title}</div><div class="news-item-meta">Leggi sull'originale →</div></div><div class="news-item-time">${n.time}</div></div></a>`).join('');
+}
+
+// ===== MODELLO AI =====
+const SIGNALS=[
+  {asset:'S&P 500',signal:'BUY',conf:78,tf:'1-2 settimane'},
+  {asset:'NVIDIA',signal:'BUY',conf:84,tf:'1 mese'},
+  {asset:'Gold',signal:'HOLD',conf:62,tf:'2 settimane'},
+  {asset:'OIL (WTI)',signal:'SELL',conf:71,tf:'1 settimana'},
+  {asset:'EUR/USD',signal:'HOLD',conf:55,tf:'3 giorni'},
+  {asset:'Bitcoin',signal:'BUY',conf:66,tf:'2 settimane'},
+  {asset:'Tesla',signal:'HOLD',conf:49,tf:'1 mese'},
+  {asset:'FTSE MIB',signal:'BUY',conf:73,tf:'1 mese'},
+];
+const SECTOR_SCORES=[
+  {name:'Tecnologia',score:82,trend:'▲ +4.2%'},{name:'Healthcare',score:74,trend:'▲ +2.1%'},
+  {name:'Finanza',score:68,trend:'▲ +1.8%'},{name:'Consumer',score:61,trend:'▲ +0.9%'},
+  {name:'Industria',score:58,trend:'▼ -0.3%'},{name:'Energia',score:44,trend:'▼ -2.4%'},
+  {name:'Real Estate',score:38,trend:'▼ -1.8%'},
+];
+function renderModel(){
+  document.getElementById('signals-tbody').innerHTML=SIGNALS.map(s=>{ const cls=s.signal==='BUY'?'buy':s.signal==='SELL'?'sell':'hold'; const fc=s.conf>=70?'high':s.conf>=55?'mid':'low'; return `<tr><td style="font-weight:500;">${s.asset}</td><td><span class="ai-signal ${cls}">${s.signal}</span></td><td><div class="conf-bar"><div class="conf-track"><div class="conf-fill ${fc}" style="width:${s.conf}%"></div></div><div class="conf-pct">${s.conf}%</div></div></td><td style="color:var(--text-muted);font-size:12px;">${s.tf}</td></tr>`; }).join('');
+  document.getElementById('sector-scores-tbody').innerHTML=SECTOR_SCORES.map(s=>{ const fc=s.score>=70?'high':s.score>=50?'mid':'low'; const tc=s.trend.startsWith('▲')?'up-text':'dn-text'; return `<tr><td style="font-weight:500;">${s.name}</td><td><div class="conf-bar"><div class="conf-track"><div class="conf-fill ${fc}" style="width:${s.score}%"></div></div><div class="conf-pct">${s.score}</div></div></td><td class="${tc}" style="font-family:var(--font-mono);font-size:12px;">${s.trend}</td></tr>`; }).join('');
+}
+
+// ===== NAVIGAZIONE =====
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  if(id==='analisi'&&!tvLoaded){ tvLoaded=true; document.getElementById('symbol-input').value=currentSymbol; loadTradingView(); }
+  if(id==='news') loadLiveNews();
+}
+
+function toggleFullscreen(){
+  const btn=document.getElementById('fsBtn');
+  if(!document.fullscreenElement){ document.documentElement.requestFullscreen().then(()=>{btn.innerHTML='⛶ ESCI';}).catch(()=>{}); }
+  else{ document.exitFullscreen().then(()=>{btn.innerHTML='⛶ SCHERMO INTERO';}); }
+}
+document.addEventListener('fullscreenchange',()=>{ document.getElementById('fsBtn').innerHTML=document.fullscreenElement?'⛶ ESCI':'⛶ SCHERMO INTERO'; });
+
+// ===== ANALISI TITOLO — TradingView =====
+let currentSymbol='NASDAQ:AAPL';
+let tvLoaded=false;
+
+function setSymbol(sym){ currentSymbol=sym; document.getElementById('symbol-input').value=sym; loadTradingView(); }
+function caricaTitolo(){
+  let val=document.getElementById('symbol-input').value.trim().toUpperCase();
+  if(!val) return;
+  if(!val.includes(':')){ if(val.endsWith('.MI')){ val='MIL:'+val.replace('.MI',''); } else{ val='NASDAQ:'+val; } }
+  currentSymbol=val;
+  loadTradingView();
+}
+
+function loadTradingView(){
+  // Grafico avanzato
+  const adv=document.getElementById('tv-advanced');
+  adv.innerHTML='<div class="tradingview-widget-container" style="height:100%;width:100%;"><div style="height:100%;width:100%;"></div></div>';
+  const s1=document.createElement('script');
+  s1.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+  s1.async=true;
+  s1.innerHTML=JSON.stringify({ autosize:true, symbol:currentSymbol, interval:'D', timezone:'Europe/Rome', theme:'dark', style:'1', locale:'it', enable_publishing:false, backgroundColor:'rgba(17,20,24,1)', gridColor:'rgba(30,37,48,1)', hide_side_toolbar:false, allow_symbol_change:true, studies:['STD;Stochastic','STD;RSI','STD;MACD'], support_host:'https://www.tradingview.com' });
+  adv.querySelector('.tradingview-widget-container').appendChild(s1);
+
+  // Analisi tecnica
+  const ta=document.getElementById('tv-techanalysis');
+  ta.innerHTML='<div class="tradingview-widget-container" style="height:100%;width:100%;"></div>';
+  const s2=document.createElement('script');
+  s2.src='https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
+  s2.async=true;
+  s2.innerHTML=JSON.stringify({ interval:'1D', width:'100%', isTransparent:true, height:'100%', symbol:currentSymbol, showIntervalTabs:true, displayMode:'single', locale:'it', colorTheme:'dark' });
+  ta.querySelector('.tradingview-widget-container').appendChild(s2);
+
+  // Dati fondamentali
+  const fn=document.getElementById('tv-fundamentals');
+  fn.innerHTML='<div class="tradingview-widget-container" style="height:100%;width:100%;"></div>';
+  const s3=document.createElement('script');
+  s3.src='https://s3.tradingview.com/external-embedding/embed-widget-symbol-info.js';
+  s3.async=true;
+  s3.innerHTML=JSON.stringify({ symbol:currentSymbol, width:'100%', locale:'it', colorTheme:'dark', isTransparent:true });
+  fn.querySelector('.tradingview-widget-container').appendChild(s3);
+}
+
+// ===== INIT =====
+renderTrackingTV();
+renderSectors();
+renderModel();
+loadLiveNews();
+</script>
+</body>
+</html>
